@@ -1,5 +1,4 @@
 import configparser
-import sys
 
 import requests.exceptions
 from binance import Client, ThreadedWebsocketManager, ThreadedDepthCacheManager
@@ -17,8 +16,6 @@ config.read("config.ini")
 api_key = "Om9RQuqGtEMHarUtRO2BfRc5ebdC4K66ArsCN2uModF4zECaVDe1oHaNn5Pz0b8N"
 api_secret = "V7dszhbOT6dTdyFlXjFIPA5j1CdaClPwTxPCmAuXMQbyKaAWi3g9w48rugXcbDy8"
 
-# logger.add('debugBinanceApp.log', format="{time} {level} {message}", level="DEBUG")
-
 
 def create_new_order(client, symbol, qty):
     # choose quantity or quoteOrderQty to filter your order
@@ -29,20 +26,20 @@ def create_new_order(client, symbol, qty):
         # quantity=qty,
         quoteOrderQty=qty
     )
-    print(
-        "Symbol: {}, Price: {}, Quantity: {}, CummulQuoteQty: {}, Status: {}, Type: {}, Side: {},\
-         Buy Price: {}, Commission: {}".format(
+    logger.info(
+        "Symbol: {}, Price: {}, Quantity: {}, CummulQuoteQty: {}, Status: {},"
+        " Type: {}, Side: {}, Buy Price: {}, Commission: {}".format(
             order['symbol'], order['price'],
             order['origQty'], order['cummulativeQuoteQty'],
             order['status'], order['type'],
             order['side'], order['fills'][0]['price'], order['fills'][0]['commission']))
-    logger.info(order)
-    return order['origQty'], order['fills'][0]['price']
+    logger.debug(order)
+    return order['origQty'], float(order['fills'][0]['price'])
 
 
 def view_my_balance(client):
     info = client.get_account()
-    logger.info(info)
+    logger.debug(info)
     for asset in info['balances']:
         print("{}: {} is free and {} is locked".format(asset['asset'], asset['free'], asset['locked']))
     print()
@@ -50,7 +47,7 @@ def view_my_balance(client):
 
 def view_all_tickers(client):
     prices = client.get_all_tickers()
-    logger.info(prices)
+    logger.debug(prices)
     for symbol in prices:
         print("{}: {}".format(symbol['symbol'], symbol['price']))
     print()
@@ -83,17 +80,14 @@ def view_symbol_info(client, symbol):
 
 
 def create_sell_order(client, buy_price, symbol, qty):
-    print('Sell func')
+    logger.info("Sell order function")
     while True:
-        print('во внешнем цикле')
         coin = client.get_ticker(symbol=symbol)
-        logger.info(coin)
-        # if float(coin['lastPrice']) <= float(coin['highPrice']) * 0.98:
-        if True:
+        logger.debug(coin)
+        last_price = float(coin['lastPrice'])
+        high_price = float(coin['highPrice'])
+        if (last_price >= buy_price * 1.4) or (last_price <= high_price * 0.98):
             while True:
-                print('внутренний цикл')
-                depth = client.get_order_book(symbol=symbol)
-                print(depth['bids'])
                 order = client.create_order(
                     symbol=symbol,
                     side=Client.SIDE_SELL,
@@ -102,13 +96,10 @@ def create_sell_order(client, buy_price, symbol, qty):
                     # quoteOrderQty=qty
                 )
                 logger.info(order)
-                print(order)
-                print("Статус:", order['status'])
-                print(client.response.headers['x-mbx-used-weight'])
+                logger.info("Статус:" + order['status'])
                 if order['status'] == 'FILLED':
                     break
-            break
-        break
+        logger.info("Wait...")
 
 
 def stuff(client, symbol):
@@ -135,42 +126,39 @@ def stuff(client, symbol):
 @logger.catch
 def main(symbol, quote_order_quantity):
     try:
-        print("Finally, I'm here")
         client = Client(api_key, api_secret, testnet=True)
-        view_my_balance(client)
 
-        # create_new_order(client, symbol, quantity)
-        # t0 = time.time()
-        # qty, buy_price = create_new_order(client, symbol, quote_order_quantity)
-        # print("Order create time:", time.time() - t0)
-        buy_price = 0
-        qty = 100
+        t0 = time.time()
+        qty, buy_price = create_new_order(client, symbol, quote_order_quantity)
+        logger.info("BUY Order create time: " + str(time.time() - t0))
+
+        t0 = time.time()
         create_sell_order(client, buy_price, symbol, qty)
-        # view_my_balance(client)
+        logger.info("SELL Order create time: " + str(time.time() - t0))
+
+        view_my_balance(client)
         # view_all_tickers(client)
         # view_coin_ticker(client, symbol)
 
         # view_all_orders_by_sym(client, symbol)
-        print(quote_order_quantity)
-        view_symbol_info(client, symbol)
+        # view_symbol_info(client, symbol)
 
-        print(client.response.headers['x-mbx-used-weight'])
         logger.info("Weight:" + client.response.headers['x-mbx-used-weight'])
     except requests.exceptions.ConnectionError:
         logger.error("-1, Connection Error")
     except requests.exceptions.ReadTimeout:
         logger.error("-1, Read Timeout Error")
+    except KeyboardInterrupt:
+        logger.error("-1, Keyboard Interrupt")
 
 
 def binance_start(coin, btc_count):
-    print("Now, I'm here!")
     symbol = coin + 'USDT'
-    print(symbol)
+    logger.info("Symbol: " + symbol)
     quote_order_quantity = btc_count
     t0 = time.time()
     main(symbol, quote_order_quantity)
-    t1 = time.time()
-    print("Время работы:", t1 - t0)
+    logger.info("Время работы: " + str(time.time() - t0))
 
 
 if __name__ == '__main__':

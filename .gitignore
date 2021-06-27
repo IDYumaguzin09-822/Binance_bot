@@ -2,6 +2,7 @@
 /test/
 /test.json
 /debug.log
+/info.log
 /redtree323.session
 /telegram_grab.py
 /net_speed_test.py

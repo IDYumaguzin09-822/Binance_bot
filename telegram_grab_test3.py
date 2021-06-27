@@ -19,6 +19,7 @@ api_id = config['Telegram']['api_id']
 api_hash = config['Telegram']['api_hash']
 
 logger.add("debug.log", format="{time} {level} {message}", level="DEBUG")
+logger.add("info.log", format="{time} {level} {message}", level="INFO")
 
 
 @logger.catch()
@@ -30,18 +31,17 @@ def start(btc_count):
     async def message_handler(event):
         # print(event.message)
         message = event.message.to_dict()['message']
-        print(message)
+        logger.info("Message from Tg: " + str(message))
         reg = re.compile(r"([1A-Z]{2,})", re.M)
         coin_name = reg.findall(message)
         if coin_name:
-            print("Coin name:", coin_name[0])
-            print("BTC count:", btc_count)
+            logger.info(f"The {str(coin_name[0])} cryptocurrency will be purchased for {btc_count} BTC")
             binance_start(coin_name[0], btc_count)
             await tg_client.disconnect()
 
     tg_client.start()
     tg_client.run_until_disconnected()
-    print("Time:", time.time() - t0)
+    logger.info("Time: " + str(time.time() - t0))
 
 
 if __name__ == '__main__':
