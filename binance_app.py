@@ -10,11 +10,8 @@ from loguru import logger
 config = configparser.ConfigParser()
 config.read("config.ini")
 
-# api_key = config['Binance']['api_key']
-# api_secret = config['Binance']['api_secret']
-
-api_key = "Om9RQuqGtEMHarUtRO2BfRc5ebdC4K66ArsCN2uModF4zECaVDe1oHaNn5Pz0b8N"
-api_secret = "V7dszhbOT6dTdyFlXjFIPA5j1CdaClPwTxPCmAuXMQbyKaAWi3g9w48rugXcbDy8"
+api_key = config['Binance']['api_key']
+api_secret = config['Binance']['api_secret']
 
 
 def create_new_order(client, symbol, qty):
